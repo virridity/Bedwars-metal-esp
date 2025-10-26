@@ -96,7 +96,8 @@ end
 scanWorkspace()
 
 local lastScan = tick()
-while wait() do
+while true do
+    task.wait()
     local now = tick()
     if now - lastScan >= 1 then
         scanWorkspace()
