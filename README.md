@@ -1,1 +1,1 @@
-for roblox bedwars, to be used with the metal detector kit.
+to be used with the metal detector kit on roblox bedwars.
