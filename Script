@@ -1,13 +1,7 @@
 if _G.executed then
-    if _G.trackedESP then
-        for _, info in pairs(_G.trackedESP) do
-            if info.text then pcall(function() info.text:Remove() end) end
-            if info.box then pcall(function() info.box:Remove() end) end
-        end
-    end
-    if _G.espConnection then
-        pcall(function() _G.espConnection:Disconnect() end)
-        _G.espConnection = nil
+    for _, info in pairs(_G.trackedESP or {}) do
+        if info.text then pcall(function() info.text:Remove() end) end
+        if info.box then pcall(function() info.box:Remove() end) end
     end
 end
 
@@ -16,51 +10,26 @@ _G.executed = true
 local config = {
     box = true,
     name = true,
-    color = Color3.fromRGB(180, 180, 180),
-    scanInterval = 1,
-    updateInterval = 0.1
+    color = Color3.fromRGB(180, 180, 180)
 }
 
-local trackedESP = {}
+local trackedESP = _G.trackedESP or {}
 _G.trackedESP = trackedESP
 
-local workspace = game:GetService("Workspace")
-local runService = game:GetService("RunService")
-
-local camera = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
-
-local function safeWorldToScreen(position)
-    if not camera then
-        camera = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
-        if not camera then return nil, false end
-    end
-    
-    local success, result, onScreen = pcall(function()
-        local vec, visible = camera:WorldToViewportPoint(position)
-        return vec, visible
-    end)
-    
-    if success then
-        return result, onScreen
-    end
-    return nil, false
-end
+local workspace = workspace or game.Workspace
 
 local function scanWorkspace()
     local valid = {}
-    
-    for _, model in ipairs(workspace:GetChildren()) do
+    for _, model in pairs(workspace:GetChildren()) do
         local prompt = model:FindFirstChild("hidden-metal-prompt")
         if prompt then
             local part = model:FindFirstChild("Part")
-            if part and part:IsA("BasePart") then
+            if part then
                 local addr = tostring(part)
                 valid[addr] = true
-                
                 if not trackedESP[addr] then
                     local text = Drawing.new("Text")
                     text.Text = "Metal"
-                    text.Size = 14
                     text.Center = true
                     text.Outline = true
                     text.Color = config.color
@@ -84,41 +53,39 @@ local function scanWorkspace()
 
     for addr, info in pairs(trackedESP) do
         if not valid[addr] then
-            pcall(function() info.text:Remove() end)
-            pcall(function() info.box:Remove() end)
+            if info.text then pcall(function() info.text:Remove() end) end
+            if info.box then pcall(function() info.box:Remove() end) end
             trackedESP[addr] = nil
         end
     end
 end
 
 local function updateESP()
-    for addr, info in pairs(trackedESP) do
+    for _, info in pairs(trackedESP) do
         local root = info.root
         local text = info.text
         local box = info.box
 
-        if not root or not root.Parent then
-            box.Visible = false
-            text.Visible = false
-            continue
-        end
+        if root and root.Parent and root.Position then
+            local headPos, onScreen1 = WorldToScreen(root.Position + Vector3.new(0, 2, 0))
+            local legPos, onScreen2 = WorldToScreen(root.Position - Vector3.new(0, 2, 0))
 
-        local rootPos = root.Position
-        local headPos, onScreen1 = safeWorldToScreen(rootPos + Vector3.new(0, 2, 0))
-        local legPos, onScreen2 = safeWorldToScreen(rootPos - Vector3.new(0, 2, 0))
+            if onScreen1 and onScreen2 then
+                local h = math.abs(headPos.Y - legPos.Y)
+                local w = h / 1.5
+                local x = headPos.X - w / 2
+                local y = headPos.Y
 
-        if headPos and legPos and onScreen1 and onScreen2 then
-            local h = math.abs(headPos.Y - legPos.Y)
-            local w = h / 1.5
-            local x = headPos.X - w / 2
-            local y = headPos.Y
+                box.Position = Vector2.new(x, y)
+                box.Size = Vector2.new(w, h)
+                box.Visible = config.box
 
-            box.Position = Vector2.new(x, y)
-            box.Size = Vector2.new(w, h)
-            box.Visible = config.box
-
-            text.Position = Vector2.new(headPos.X, y - 16)
-            text.Visible = config.name
+                text.Position = Vector2.new(headPos.X, y - 16)
+                text.Visible = config.name
+            else
+                box.Visible = false
+                text.Visible = false
+            end
         else
             box.Visible = false
             text.Visible = false
@@ -128,56 +95,12 @@ end
 
 scanWorkspace()
 
-local lastScan = 0
-local lastUpdate = 0
-
-local connection = nil
-if runService and runService.RenderStepped then
-    connection = runService.RenderStepped:Connect(function()
-        local now = tick()
-        
-        if now - lastScan >= config.scanInterval then
-            scanWorkspace()
-            lastScan = now
-        end
-        
-        if now - lastUpdate >= config.updateInterval then
-            updateESP()
-            lastUpdate = now
-        end
-    end)
-elseif runService and runService.Heartbeat then
-    connection = runService.Heartbeat:Connect(function()
-        local now = tick()
-        
-        if now - lastScan >= config.scanInterval then
-            scanWorkspace()
-            lastScan = now
-        end
-        
-        if now - lastUpdate >= config.updateInterval then
-            updateESP()
-            lastUpdate = now
-        end
-    end)
-else
-    task.spawn(function()
-        while _G.executed do
-            local now = tick()
-            
-            if now - lastScan >= config.scanInterval then
-                scanWorkspace()
-                lastScan = now
-            end
-            
-            if now - lastUpdate >= config.updateInterval then
-                updateESP()
-                lastUpdate = now
-            end
-            
-            task.wait()
-        end
-    end)
+local lastScan = tick()
+while wait() do
+    local now = tick()
+    if now - lastScan >= 1 then
+        scanWorkspace()
+        lastScan = now
+    end
+    updateESP()
 end
-
-_G.espConnection = connection
