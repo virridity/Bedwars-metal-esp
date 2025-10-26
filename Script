@@ -19,8 +19,8 @@ local config = {
 box = true,
 name = true,
 color = Color3.fromRGB(180, 180, 180),
-scanInterval = 1,        – Scan workspace every N seconds
-updateInterval = 0.1     – Update ESP every N seconds
+scanInterval = 1,
+updateInterval = 0.1
 }
 
 – State
@@ -31,7 +31,7 @@ _G.trackedESP = trackedESP
 local workspace = game:GetService(“Workspace”)
 local runService = game:GetService(“RunService”)
 
-– Camera reference (cached)
+– Camera reference
 local camera = workspace.CurrentCamera
 
 – WorldToScreen wrapper with error handling
@@ -59,7 +59,6 @@ for _, model in ipairs(workspace:GetChildren()) do
             local addr = tostring(part)
             valid[addr] = true
             
-            -- Create new ESP entry if doesn't exist
             if not trackedESP[addr] then
                 local text = Drawing.new("Text")
                 text.Text = "Metal"
@@ -85,7 +84,6 @@ for _, model in ipairs(workspace:GetChildren()) do
     end
 end
 
--- Remove invalid entries
 for addr, info in pairs(trackedESP) do
     if not valid[addr] then
         pcall(function() info.text:Remove() end)
@@ -105,7 +103,6 @@ local text = info.text
 local box = info.box
 
 ```
-    -- Validate root still exists
     if not root or not root.Parent then
         box.Visible = false
         text.Visible = false
@@ -122,12 +119,10 @@ local box = info.box
         local x = headPos.X - w / 2
         local y = headPos.Y
 
-        -- Update box
         box.Position = Vector2.new(x, y)
         box.Size = Vector2.new(w, h)
         box.Visible = config.box
 
-        -- Update text
         text.Position = Vector2.new(headPos.X, y - 16)
         text.Visible = config.name
     else
@@ -150,13 +145,11 @@ _G.espConnection = runService.RenderStepped:Connect(function()
 local now = tick()
 
 ```
--- Periodic workspace scanning
 if now - lastScan >= config.scanInterval then
     scanWorkspace()
     lastScan = now
 end
 
--- Frequent ESP updates
 if now - lastUpdate >= config.updateInterval then
     updateESP()
     lastUpdate = now
