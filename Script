@@ -1,159 +1,150 @@
-– Cleanup existing ESP instances
+-- Cleanup existing ESP instances
 if _G.executed then
-if _G.trackedESP then
-for _, info in pairs(_G.trackedESP) do
-if info.text then pcall(function() info.text:Remove() end) end
-if info.box then pcall(function() info.box:Remove() end) end
-end
-end
-if _G.espConnection then
-_G.espConnection:Disconnect()
-_G.espConnection = nil
-end
+    if _G.trackedESP then
+        for _, info in pairs(_G.trackedESP) do
+            if info.text then pcall(function() info.text:Remove() end) end
+            if info.box then pcall(function() info.box:Remove() end) end
+        end
+    end
+    if _G.espConnection then
+        _G.espConnection:Disconnect()
+        _G.espConnection = nil
+    end
 end
 
 _G.executed = true
 
-– Configuration
+-- Configuration
 local config = {
-box = true,
-name = true,
-color = Color3.fromRGB(180, 180, 180),
-scanInterval = 1,
-updateInterval = 0.1
+    box = true,
+    name = true,
+    color = Color3.fromRGB(180, 180, 180),
+    scanInterval = 1,
+    updateInterval = 0.1
 }
 
-– State
+-- State
 local trackedESP = {}
 _G.trackedESP = trackedESP
 
-– Services
-local workspace = game:GetService(“Workspace”)
-local runService = game:GetService(“RunService”)
+-- Services
+local workspace = game:GetService("Workspace")
+local runService = game:GetService("RunService")
 
-– Camera reference
+-- Camera reference
 local camera = workspace.CurrentCamera
 
-– WorldToScreen wrapper with error handling
+-- WorldToScreen wrapper with error handling
 local function safeWorldToScreen(position)
-local success, result, onScreen = pcall(function()
-local vec, visible = camera:WorldToViewportPoint(position)
-return vec, visible
-end)
-if success then
-return result, onScreen
-end
-return nil, false
+    local success, result, onScreen = pcall(function()
+        local vec, visible = camera:WorldToViewportPoint(position)
+        return vec, visible
+    end)
+    if success then
+        return result, onScreen
+    end
+    return nil, false
 end
 
-– Scan workspace for valid targets
+-- Scan workspace for valid targets
 local function scanWorkspace()
-local valid = {}
+    local valid = {}
+    
+    for _, model in ipairs(workspace:GetChildren()) do
+        local prompt = model:FindFirstChild("hidden-metal-prompt")
+        if prompt then
+            local part = model:FindFirstChild("Part")
+            if part and part:IsA("BasePart") then
+                local addr = tostring(part)
+                valid[addr] = true
+                
+                if not trackedESP[addr] then
+                    local text = Drawing.new("Text")
+                    text.Text = "Metal"
+                    text.Size = 14
+                    text.Center = true
+                    text.Outline = true
+                    text.Color = config.color
+                    text.Visible = false
 
-```
-for _, model in ipairs(workspace:GetChildren()) do
-    local prompt = model:FindFirstChild("hidden-metal-prompt")
-    if prompt then
-        local part = model:FindFirstChild("Part")
-        if part and part:IsA("BasePart") then
-            local addr = tostring(part)
-            valid[addr] = true
-            
-            if not trackedESP[addr] then
-                local text = Drawing.new("Text")
-                text.Text = "Metal"
-                text.Size = 14
-                text.Center = true
-                text.Outline = true
-                text.Color = config.color
-                text.Visible = false
+                    local box = Drawing.new("Square")
+                    box.Thickness = 1
+                    box.Filled = false
+                    box.Color = config.color
+                    box.Visible = false
 
-                local box = Drawing.new("Square")
-                box.Thickness = 1
-                box.Filled = false
-                box.Color = config.color
-                box.Visible = false
-
-                trackedESP[addr] = {
-                    root = part,
-                    text = text,
-                    box = box
-                }
+                    trackedESP[addr] = {
+                        root = part,
+                        text = text,
+                        box = box
+                    }
+                end
             end
+        end
+    end
+
+    for addr, info in pairs(trackedESP) do
+        if not valid[addr] then
+            pcall(function() info.text:Remove() end)
+            pcall(function() info.box:Remove() end)
+            trackedESP[addr] = nil
         end
     end
 end
 
-for addr, info in pairs(trackedESP) do
-    if not valid[addr] then
-        pcall(function() info.text:Remove() end)
-        pcall(function() info.box:Remove() end)
-        trackedESP[addr] = nil
-    end
-end
-```
-
-end
-
-– Update ESP rendering
+-- Update ESP rendering
 local function updateESP()
-for addr, info in pairs(trackedESP) do
-local root = info.root
-local text = info.text
-local box = info.box
+    for addr, info in pairs(trackedESP) do
+        local root = info.root
+        local text = info.text
+        local box = info.box
 
-```
-    if not root or not root.Parent then
-        box.Visible = false
-        text.Visible = false
-        continue
-    end
+        if not root or not root.Parent then
+            box.Visible = false
+            text.Visible = false
+            continue
+        end
 
-    local rootPos = root.Position
-    local headPos, onScreen1 = safeWorldToScreen(rootPos + Vector3.new(0, 2, 0))
-    local legPos, onScreen2 = safeWorldToScreen(rootPos - Vector3.new(0, 2, 0))
+        local rootPos = root.Position
+        local headPos, onScreen1 = safeWorldToScreen(rootPos + Vector3.new(0, 2, 0))
+        local legPos, onScreen2 = safeWorldToScreen(rootPos - Vector3.new(0, 2, 0))
 
-    if headPos and legPos and onScreen1 and onScreen2 then
-        local h = math.abs(headPos.Y - legPos.Y)
-        local w = h / 1.5
-        local x = headPos.X - w / 2
-        local y = headPos.Y
+        if headPos and legPos and onScreen1 and onScreen2 then
+            local h = math.abs(headPos.Y - legPos.Y)
+            local w = h / 1.5
+            local x = headPos.X - w / 2
+            local y = headPos.Y
 
-        box.Position = Vector2.new(x, y)
-        box.Size = Vector2.new(w, h)
-        box.Visible = config.box
+            box.Position = Vector2.new(x, y)
+            box.Size = Vector2.new(w, h)
+            box.Visible = config.box
 
-        text.Position = Vector2.new(headPos.X, y - 16)
-        text.Visible = config.name
-    else
-        box.Visible = false
-        text.Visible = false
+            text.Position = Vector2.new(headPos.X, y - 16)
+            text.Visible = config.name
+        else
+            box.Visible = false
+            text.Visible = false
+        end
     end
 end
-```
 
-end
-
-– Initial scan
+-- Initial scan
 scanWorkspace()
 
-– Main loop with timing control
+-- Main loop with timing control
 local lastScan = 0
 local lastUpdate = 0
 
 _G.espConnection = runService.RenderStepped:Connect(function()
-local now = tick()
-
-```
-if now - lastScan >= config.scanInterval then
-    scanWorkspace()
-    lastScan = now
-end
-
-if now - lastUpdate >= config.updateInterval then
-    updateESP()
-    lastUpdate = now
-end
-```
-
+    local now = tick()
+    
+    if now - lastScan >= config.scanInterval then
+        scanWorkspace()
+        lastScan = now
+    end
+    
+    if now - lastUpdate >= config.updateInterval then
+        updateESP()
+        lastUpdate = now
+    end
 end)
