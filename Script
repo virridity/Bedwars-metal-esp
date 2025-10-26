@@ -1,16 +1,16 @@
 if _G.executed then
-    for _, info in pairs(_G.trackedESP or {}) do
-        if info.text then pcall(function() info.text:Remove() end) end
-        if info.box then pcall(function() info.box:Remove() end) end
-    end
+for _, info in pairs(_G.trackedESP or {}) do
+if info.text then pcall(function() info.text:Remove() end) end
+if info.box then pcall(function() info.box:Remove() end) end
+end
 end
 
 _G.executed = true
 
 local config = {
-    box = true,
-    name = true,
-    color = Color3.fromRGB(180, 180, 180)
+box = true,
+name = true,
+color = Color3.fromRGB(180, 180, 180)
 }
 
 local trackedESP = _G.trackedESP or {}
@@ -19,88 +19,94 @@ _G.trackedESP = trackedESP
 local workspace = workspace or game.Workspace
 
 local function scanWorkspace()
-    local valid = {}
-    for _, model in pairs(workspace:GetChildren()) do
-        local prompt = model:FindFirstChild("hidden-metal-prompt")
-        if prompt then
-            local part = model:FindFirstChild("Part")
-            if part then
-                local addr = tostring(part)
-                valid[addr] = true
-                if not trackedESP[addr] then
-                    local text = Drawing.new("Text")
-                    text.Text = "Metal"
-                    text.Center = true
-                    text.Outline = true
-                    text.Color = config.color
-                    text.Visible = false
+local valid = {}
+for _, model in pairs(workspace:GetChildren()) do
+local prompt = model:FindFirstChild(“hidden-metal-prompt”)
+if prompt then
+local part = model:FindFirstChild(“Part”)
+if part then
+local addr = tostring(part)
+valid[addr] = true
+if not trackedESP[addr] then
+local text = Drawing.new(“Text”)
+text.Text = “Metal”
+text.Center = true
+text.Outline = true
+text.Color = config.color
+text.Visible = false
 
-                    local box = Drawing.new("Square")
-                    box.Thickness = 1
-                    box.Filled = false
-                    box.Color = config.color
-                    box.Visible = false
+```
+                local box = Drawing.new("Square")
+                box.Thickness = 1
+                box.Filled = false
+                box.Color = config.color
+                box.Visible = false
 
-                    trackedESP[addr] = {
-                        root = part,
-                        text = text,
-                        box = box
-                    }
-                end
+                trackedESP[addr] = {
+                    root = part,
+                    text = text,
+                    box = box
+                }
             end
-        end
-    end
-
-    for addr, info in pairs(trackedESP) do
-        if not valid[addr] then
-            if info.text then pcall(function() info.text:Remove() end) end
-            if info.box then pcall(function() info.box:Remove() end) end
-            trackedESP[addr] = nil
         end
     end
 end
 
+for addr, info in pairs(trackedESP) do
+    if not valid[addr] then
+        if info.text then pcall(function() info.text:Remove() end) end
+        if info.box then pcall(function() info.box:Remove() end) end
+        trackedESP[addr] = nil
+    end
+end
+```
+
+end
+
 local function updateESP()
-    for _, info in pairs(trackedESP) do
-        local root = info.root
-        local text = info.text
-        local box = info.box
+for _, info in pairs(trackedESP) do
+local root = info.root
+local text = info.text
+local box = info.box
 
-        if root and root.Parent and root.Position then
-            local headPos, onScreen1 = WorldToScreen(root.Position + Vector3.new(0, 2, 0))
-            local legPos, onScreen2 = WorldToScreen(root.Position - Vector3.new(0, 2, 0))
+```
+    if root and root.Parent and root.Position then
+        local headPos, onScreen1 = WorldToScreen(root.Position + Vector3.new(0, 2, 0))
+        local legPos, onScreen2 = WorldToScreen(root.Position - Vector3.new(0, 2, 0))
 
-            if onScreen1 and onScreen2 then
-                local h = math.abs(headPos.Y - legPos.Y)
-                local w = h / 1.5
-                local x = headPos.X - w / 2
-                local y = headPos.Y
+        if onScreen1 and onScreen2 then
+            local h = math.abs(headPos.Y - legPos.Y)
+            local w = h / 1.5
+            local x = headPos.X - w / 2
+            local y = headPos.Y
 
-                box.Position = Vector2.new(x, y)
-                box.Size = Vector2.new(w, h)
-                box.Visible = config.box
+            box.Position = Vector2.new(x, y)
+            box.Size = Vector2.new(w, h)
+            box.Visible = config.box
 
-                text.Position = Vector2.new(headPos.X, y - 16)
-                text.Visible = config.name
-            else
-                box.Visible = false
-                text.Visible = false
-            end
+            text.Position = Vector2.new(headPos.X, y - 16)
+            text.Visible = config.name
         else
             box.Visible = false
             text.Visible = false
         end
+    else
+        box.Visible = false
+        text.Visible = false
     end
+end
+```
+
 end
 
 scanWorkspace()
 
 local lastScan = tick()
 while wait() do
-    local now = tick()
-    if now - lastScan >= 1 then
-        scanWorkspace()
-        lastScan = now
-    end
-    updateESP()
+local now = tick()
+if now - lastScan >= 1 then
+scanWorkspace()
+lastScan = now
+end
+updateESP()
 end
