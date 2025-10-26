@@ -16,7 +16,10 @@ local config = {
 local trackedESP = _G.trackedESP or {}
 _G.trackedESP = trackedESP
 
-local workspace = workspace or game.Workspace
+local workspace = workspace or game and game.Workspace or nil
+if not workspace then return end
+
+local lastScan = 0
 
 local function scanWorkspace()
     local valid = {}
@@ -25,7 +28,7 @@ local function scanWorkspace()
         if prompt then
             local part = model:FindFirstChild("Part")
             if part then
-                local addr = tostring(part)
+                local addr = tostring(part.Address)
                 valid[addr] = true
                 if not trackedESP[addr] then
                     local text = Drawing.new("Text")
@@ -66,7 +69,7 @@ local function updateESP()
         local text = info.text
         local box = info.box
 
-        if root and root.Parent and root.Position then
+        if root and root.Position then
             local headPos, onScreen1 = WorldToScreen(root.Position + Vector3.new(0, 2, 0))
             local legPos, onScreen2 = WorldToScreen(root.Position - Vector3.new(0, 2, 0))
 
@@ -95,10 +98,8 @@ end
 
 scanWorkspace()
 
-local lastScan = tick()
 while true do
-    task.wait()
-    local now = tick()
+    local now = os.clock()
     if now - lastScan >= 1 then
         scanWorkspace()
         lastScan = now
